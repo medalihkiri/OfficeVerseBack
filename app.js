@@ -45,7 +45,7 @@ const roomRoutes = require('./routes/roomRoutes'); // Adjust path as needed
 //app.use(`${api}/categories`, categoriesRoute);
 app.use(`/users`, userRoute);
 //app.use(`${api}/map`, mapRoute);
-app.use(`${api}/rooms`, roomRoutes);
+app.use(`/rooms`, roomRoutes);
 
 //app.use(`/users`, trelloAuthRoute);
 const dbConfig = require('./config/database.config.js');
