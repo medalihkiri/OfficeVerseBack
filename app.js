@@ -43,11 +43,11 @@ const roomRoutes = require('./routes/roomRoutes'); // Adjust path as needed
 // Routes
 // localhost:3000/api/categories fil postman 
 //app.use(`${api}/categories`, categoriesRoute);
-app.use(`${api}/users`, userRoute);
+app.use(`/users`, userRoute);
 //app.use(`${api}/map`, mapRoute);
 app.use(`${api}/rooms`, roomRoutes);
 
-app.use(`${api}/users`, trelloAuthRoute);
+//app.use(`/users`, trelloAuthRoute);
 const dbConfig = require('./config/database.config.js');
 
 mongoose.Promise = global.Promise;
