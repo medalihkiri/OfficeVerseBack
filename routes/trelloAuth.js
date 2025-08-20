@@ -6,7 +6,7 @@ const User = require('../models/user');
 
 const TRELLO_KEY = process.env.TRELLO_KEY;
 const TRELLO_SECRET = process.env.TRELLO_SECRET;
-const CALLBACK_URL = 'http://localhost:3000/api/users/trello/callback';
+const CALLBACK_URL = 'https://officeverseback.onrender.com/api/users/trello/callback';
 
 
 const oa = new OAuth(
