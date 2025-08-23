@@ -4,6 +4,7 @@ const router = express.Router();
 const Room = require('../models/Room');
 const User = require('../models/user');
 const authenticate = require('../middleware/auth'); // Your existing auth middleware
+const Message = require('../models/Message');
 
 // Create a new room (Strictly for authenticated users)
 router.post('/', authenticate, async (req, res) => {
@@ -41,6 +42,61 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
+// Get recent messages for a room (latest-first, paginated)
+router.get('/:roomId/messages', async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
+    const before = req.query.before ? new Date(req.query.before) : null;
+
+    const query = { room: roomId };
+    if (before) query.createdAt = { $lt: before };
+
+    const messages = await Message.find(query)
+      .sort({ createdAt: -1 })   // latest first (matches your UI “newest at top”)
+      .limit(limit)
+      .lean();
+
+    res.json({ success: true, messages });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Post a message (idempotent via messageId)
+router.post('/:roomId/messages', /*authenticate,*/ async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const { messageId, senderName, text, createdAt } = req.body;
+
+    if (!messageId || !senderName || !text) {
+      return res.status(400).json({ success: false, error: 'messageId, senderName and text are required' });
+    }
+
+    // Optional: attach senderId when authenticated
+    let senderId = null;
+    if (req.user && req.user.userId) senderId = req.user.userId;
+
+    const doc = await Message.findOneAndUpdate(
+      { messageId },
+      {
+        $setOnInsert: {
+          messageId,
+          room: roomId,
+          senderId,
+          senderName,
+          text,
+          createdAt: createdAt ? new Date(createdAt) : new Date(),
+        }
+      },
+      { upsert: true, new: true }
+    );
+
+    res.status(201).json({ success: true, message: doc });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // **FIXED**: Join a room with intelligent password handling
 router.post('/:roomId/join', authenticate, async (req, res) => {

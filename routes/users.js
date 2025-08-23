@@ -56,6 +56,23 @@ router.post('/register', async (req, res) => {
     }
 });
 
+
+router.get('/trello/status', authenticate, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+
+        // Respond with a boolean indicating if the token exists
+        res.json({ hasTrelloToken: !!user.trelloToken });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // Login
 router.post('/login', async (req, res) => {
     try {
