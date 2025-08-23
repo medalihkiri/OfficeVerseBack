@@ -176,8 +176,8 @@ router.get('/private/:userA/:userB', async (req, res) => {
     const query = {
       isPrivate: true,
       $or: [
-        { senderName: userA, recipientId: userB },
-        { senderName: userB, recipientId: userA }
+        { senderId: userA, recipientId: userB },
+        { senderId: userB, recipientId: userA }
       ]
     };
     if (before) query.createdAt = { $lt: before };
