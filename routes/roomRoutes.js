@@ -64,16 +64,15 @@ router.get('/:roomId/messages', async (req, res) => {
 });
 
 // Post a message (idempotent via messageId)
-router.post('/:roomId/messages', /*authenticate,*/ async (req, res) => {
+router.post('/:roomId/messages', async (req, res) => {
   try {
     const { roomId } = req.params;
-    const { messageId, senderName, text, createdAt } = req.body;
+    const { messageId, senderName, text, createdAt, recipientId, isPrivate } = req.body;
 
     if (!messageId || !senderName || !text) {
       return res.status(400).json({ success: false, error: 'messageId, senderName and text are required' });
     }
 
-    // Optional: attach senderId when authenticated
     let senderId = null;
     if (req.user && req.user.userId) senderId = req.user.userId;
 
@@ -87,6 +86,8 @@ router.post('/:roomId/messages', /*authenticate,*/ async (req, res) => {
           senderName,
           text,
           createdAt: createdAt ? new Date(createdAt) : new Date(),
+          isPrivate: !!isPrivate,
+          recipientId: recipientId || null
         }
       },
       { upsert: true, new: true }
@@ -163,6 +164,32 @@ router.get('/user', authenticate, async (req, res) => {
     res.json({ success: true, rooms });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+// Fetch private conversation between two users
+router.get('/private/:userA/:userB', async (req, res) => {
+  try {
+    const { userA, userB } = req.params;
+    const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
+    const before = req.query.before ? new Date(req.query.before) : null;
+
+    const query = {
+      isPrivate: true,
+      $or: [
+        { senderName: userA, recipientId: userB },
+        { senderName: userB, recipientId: userA }
+      ]
+    };
+    if (before) query.createdAt = { $lt: before };
+
+    const messages = await Message.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    res.json({ success: true, messages });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
