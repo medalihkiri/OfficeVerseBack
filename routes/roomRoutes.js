@@ -49,7 +49,9 @@ router.get('/:roomId/messages', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const before = req.query.before ? new Date(req.query.before) : null;
 
-    const query = { room: roomId };
+    const query = { room: roomId,
+      isPrivate: { $ne: true }
+     };
     if (before) query.createdAt = { $lt: before };
 
     const messages = await Message.find(query)
