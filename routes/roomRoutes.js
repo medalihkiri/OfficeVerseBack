@@ -178,8 +178,8 @@ router.get('/private/:userA/:userB', async (req, res) => {
     const query = {
       isPrivate: true,
       $or: [
-        { senderId: userA, recipientId: userB },
-        { senderId: userB, recipientId: userA }
+         { $and: [{ senderId: userA }, { recipientId: userB }] },
+        { $and: [{ senderId: userB }, { recipientId: userA }] }
       ]
     };
     if (before) query.createdAt = { $lt: before };
@@ -191,6 +191,7 @@ router.get('/private/:userA/:userB', async (req, res) => {
 
     res.json({ success: true, messages });
   } catch (err) {
+    console.error(`[ERROR] Failed to load private messages between ${req.params.userA} and ${req.params.userB}:`, err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
