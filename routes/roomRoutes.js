@@ -66,7 +66,7 @@ router.get('/:roomId/messages', async (req, res) => {
 });
 
 // Post a message (idempotent via messageId)
-router.post('/:roomId/messages', async (req, res) => {
+router.post('/:roomId/messages', authenticate, async (req, res) => {
   try {
     const { roomId } = req.params;
     const { messageId, senderName, text, createdAt, recipientId, isPrivate } = req.body;
@@ -77,7 +77,7 @@ router.post('/:roomId/messages', async (req, res) => {
 
     let senderId = null;
     if (req.user && req.user.userId) senderId = req.user.userId;
-
+    //const senderId  req.user.userId;
     const doc = await Message.findOneAndUpdate(
       { messageId },
       {
@@ -101,7 +101,7 @@ router.post('/:roomId/messages', async (req, res) => {
   }
 });
 
-// **FIXED**: Join a room with intelligent password handling
+// Join a room with intelligent password handling
 router.post('/:roomId/join', authenticate, async (req, res) => {
   try {
     const { password } = req.body;
