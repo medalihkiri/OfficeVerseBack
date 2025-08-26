@@ -3,7 +3,8 @@
 const mongoose = require('mongoose');
 
 const MessageSchema = new mongoose.Schema({
-  // ... (other fields are unchanged)
+  messageId: { type: String, required: true, unique: true }, // idempotent
+  room: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', index: true }, // optional for private
   senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   senderName: { type: String, required: true },
   text: { type: String, required: true, maxlength: 5000 },
