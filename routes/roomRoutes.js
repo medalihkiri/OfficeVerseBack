@@ -69,13 +69,13 @@ router.get('/:roomId/messages', async (req, res) => {
 router.post('/:roomId/messages', authenticate, async (req, res) => {
   try {
     const { roomId } = req.params;
-    const { messageId, senderName, text, createdAt, recipientId, isPrivate } = req.body;
+    const { messageId, senderId, senderName, text, createdAt, recipientId, isPrivate } = req.body;
 
-    if (!messageId || !senderName || !text) {
+    if (!messageId || !senderId || !senderName || !text) {
       return res.status(400).json({ success: false, error: 'messageId, senderName and text are required' });
     }
 
-    let senderId = null;
+    //let senderId = null;
     if (req.user && req.user.userId) senderId = req.user.userId;
     //const senderId  req.user.userId;
     const doc = await Message.findOneAndUpdate(
