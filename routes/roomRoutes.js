@@ -70,7 +70,7 @@ router.get('/:roomId/messages', async (req, res) => {
 // Post a message (idempotent via messageId)
 router.post('/:roomId/messages', authenticate, async (req, res) => {
   try {
-    const { roomId } = req.params;
+    const { roomId: roomIdString } = req.params;
     const { messageId, senderId, senderName, text, createdAt, recipientId, isPrivate } = req.body;
     
      // Validate the roomId to ensure it's a valid ObjectId format.
@@ -81,17 +81,17 @@ router.post('/:roomId/messages', authenticate, async (req, res) => {
     //const roomId = mongoose.Types.ObjectId(roomIdString); // Convert string to ObjectId
     //let senderId = null;
     if (!messageId || !senderId || !senderName || !text) {
-      return res.status(400).json({ success: false, error: 'messageId, senderName and text are required' });
+      return res.status(400).json({ success: false, error: 'messageId, senderId, senderName and text are required' });
     }
 
-    if (req.user && req.user.userId) senderId = req.user.userId;
+    //if (req.user && req.user.userId) senderId = req.user.userId;
     //const senderId  req.user.userId;
     const doc = await Message.findOneAndUpdate(
       { messageId },
       {
         $setOnInsert: {
           messageId,
-          room: roomId,
+          room: mongoose.Types.ObjectId(roomIdString),
           senderId,
           senderName,
           text,
