@@ -6,6 +6,8 @@ const User = require('../models/user');
 const authenticate = require('../middleware/auth'); // Your existing auth middleware
 const Message = require('../models/Message');
 
+const mongoose = require('mongoose');
+
 // Create a new room (Strictly for authenticated users)
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -70,12 +72,18 @@ router.post('/:roomId/messages', authenticate, async (req, res) => {
   try {
     const { roomId } = req.params;
     const { messageId, senderId, senderName, text, createdAt, recipientId, isPrivate } = req.body;
-
+    
+     // Validate the roomId to ensure it's a valid ObjectId format.
+    if (!mongoose.Types.ObjectId.isValid(roomIdString)) {
+        return res.status(400).json({ success: false, error: 'Invalid Room ID format.' });
+    }
+    
+    //const roomId = mongoose.Types.ObjectId(roomIdString); // Convert string to ObjectId
+    //let senderId = null;
     if (!messageId || !senderId || !senderName || !text) {
       return res.status(400).json({ success: false, error: 'messageId, senderName and text are required' });
     }
 
-    //let senderId = null;
     if (req.user && req.user.userId) senderId = req.user.userId;
     //const senderId  req.user.userId;
     const doc = await Message.findOneAndUpdate(
@@ -97,6 +105,8 @@ router.post('/:roomId/messages', authenticate, async (req, res) => {
 
     res.status(201).json({ success: true, message: doc });
   } catch (err) {
+    //res.status(500).json({ success: false, error: err.message });
+    console.error(`[ERROR] Failed to save message:`, err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
