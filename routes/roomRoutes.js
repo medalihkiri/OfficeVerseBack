@@ -7,6 +7,7 @@ const authenticate = require('../middleware/auth'); // Your existing auth middle
 const Message = require('../models/Message');
 
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken'); // Added for optional authentication
 
 // Create a new room (Strictly for authenticated users)
 router.post('/', authenticate, async (req, res) => {
@@ -51,9 +52,7 @@ router.get('/:roomId/messages', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const before = req.query.before ? new Date(req.query.before) : null;
 
-    const query = { room: roomId,
-      isPrivate: { $ne: true }
-     };
+    const query = { room: roomId };
     if (before) query.createdAt = { $lt: before };
 
     const messages = await Message.find(query)
@@ -111,45 +110,32 @@ router.post('/:roomId/messages', authenticate, async (req, res) => {
   }
 });
 
-// Join a room with intelligent password handling
-router.post('/:roomId/join', authenticate, async (req, res) => {
+// Join a room - now accessible by guests
+router.post('/:roomId/join', async (req, res) => {
   try {
-    const { password } = req.body;
     const { roomId } = req.params;
-    const { userId } = req.user;
 
     const room = await Room.findById(roomId);
     if (!room) return res.status(404).json({ success: false, error: 'Room not found' });
 
-    // --- NEW LOGIC ---
-    // If the room is private, we need to authorize the user.
-    if (room.isPrivate) {
-      const user = await User.findById(userId);
-      // Check if user is already in the allowed list for this room.
-      const isAlreadyAllowed = user.allowedRooms.map(id => id.toString()).includes(roomId);
-
-      // If they are already allowed, skip the password check entirely.
-      if (isAlreadyAllowed) {
-        console.log(`User ${userId} already has access to room ${roomId}. Bypassing password check.`);
-      } 
-      // If they are not yet allowed, they MUST provide the correct password.
-      else {
-        if (!password) {
-          return res.status(401).json({ success: false, error: 'Password required' });
+    // If a user is logged in (i.e., provides a valid token), add the room to their allowed list.
+    // Guests will skip this block and join without any user-specific action.
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'a');
+        if (decoded && decoded.userId) {
+          await User.findByIdAndUpdate(decoded.userId, {
+            $addToSet: { allowedRooms: room._id }
+          });
         }
-        const isMatch = await bcrypt.compare(password, room.passwordHash);
-        if (!isMatch) {
-          return res.status(401).json({ success: false, error: 'Invalid password' });
-        }
+      } catch (err) {
+        // Token is invalid or expired, so we treat the user as a guest.
+        console.log("Join attempt with invalid token:", err.message);
       }
     }
-
-    // If we've reached this point, the user is authorized (either by password or pre-existing permission).
-    // Add the room to their personal list to ensure it's there for future re-joins.
-    await User.findByIdAndUpdate(userId, {
-        $addToSet: { allowedRooms: room._id } 
-    });
-
+    
     res.status(200).json({ success: true, room, message: 'Successfully joined room.' });
 
   } catch (err) {
@@ -157,7 +143,7 @@ router.post('/:roomId/join', authenticate, async (req, res) => {
   }
 });
 
-// ... (The rest of the file, /user, /find, /, /leave, remains unchanged)
+// ... (The rest of the file, /user, /find, /leave, remains unchanged)
 // Get all rooms a user has created OR is allowed in
 router.get('/user', authenticate, async (req, res) => {
   try {
@@ -222,10 +208,10 @@ router.get('/find/:name', async (req, res) => {
   }
 });
 
-// Get all public rooms
+// Get all rooms, including private ones
 router.get('/', async (req, res) => {
   try {
-    const rooms = await Room.find({ isPrivate: false });
+    const rooms = await Room.find();
     res.json({ success: true, rooms });
   } catch (err) {
     res.status(500).json({ error: err.message });
