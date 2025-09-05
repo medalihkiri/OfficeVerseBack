@@ -169,17 +169,19 @@ router.get('/user', authenticate, async (req, res) => {
   }
 });
 // Fetch private conversation between two users
-router.get('/private/:userA/:userB', async (req, res) => {
+router.get('/private/:otherUserId', authenticate, async (req, res) => {
   try {
-    const { userA, userB } = req.params;
+    const currentUserId = req.user.userId;
+    const otherUserId = req.params.otherUserId;
+    
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const before = req.query.before ? new Date(req.query.before) : null;
 
     const query = {
       isPrivate: true,
       $or: [
-         { $and: [{ senderId: userA }, { recipientId: userB }] },
-        { $and: [{ senderId: userB }, { recipientId: userA }] }
+        { $and: [{ senderId: currentUserId }, { recipientId: otherUserId }] },
+        { $and: [{ senderId: otherUserId }, { recipientId: currentUserId }] }
       ]
     };
     if (before) query.createdAt = { $lt: before };
@@ -191,7 +193,7 @@ router.get('/private/:userA/:userB', async (req, res) => {
 
     res.json({ success: true, messages });
   } catch (err) {
-    console.error(`[ERROR] Failed to load private messages between ${req.params.userA} and ${req.params.userB}:`, err);
+    console.error(`[ERROR] Failed to load private messages between ${req.user.userId} and ${req.params.otherUserId}:`, err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
