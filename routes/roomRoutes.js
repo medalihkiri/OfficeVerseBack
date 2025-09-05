@@ -52,7 +52,11 @@ router.get('/:roomId/messages', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const before = req.query.before ? new Date(req.query.before) : null;
 
-    const query = { room: roomId };
+    // CORRECTED: This query now explicitly filters for non-private messages.
+    const query = {
+      room: roomId,
+      isPrivate: { $ne: true }
+    };
     if (before) query.createdAt = { $lt: before };
 
     const messages = await Message.find(query)
@@ -143,7 +147,7 @@ router.post('/:roomId/join', async (req, res) => {
   }
 });
 
-// ... (The rest of the file, /user, /find, /leave, remains unchanged)
+// ... (The rest of the file, /user, /find, /leave, etc., remains unchanged)
 // Get all rooms a user has created OR is allowed in
 router.get('/user', authenticate, async (req, res) => {
   try {
