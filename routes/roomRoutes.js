@@ -52,11 +52,7 @@ router.get('/:roomId/messages', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const before = req.query.before ? new Date(req.query.before) : null;
 
-    // CORRECTED: This query now explicitly filters for non-private messages.
-    const query = {
-      room: roomId,
-      isPrivate: { $ne: true }
-    };
+    const query = { room: roomId };
     if (before) query.createdAt = { $lt: before };
 
     const messages = await Message.find(query)
@@ -147,7 +143,7 @@ router.post('/:roomId/join', async (req, res) => {
   }
 });
 
-// ... (The rest of the file, /user, /find, /leave, etc., remains unchanged)
+// ... (The rest of the file, /user, /find, /leave, remains unchanged)
 // Get all rooms a user has created OR is allowed in
 router.get('/user', authenticate, async (req, res) => {
   try {
@@ -169,19 +165,17 @@ router.get('/user', authenticate, async (req, res) => {
   }
 });
 // Fetch private conversation between two users
-router.get('/private/:otherUserId', authenticate, async (req, res) => {
+router.get('/private/:userA/:userB', async (req, res) => {
   try {
-    const currentUserId = req.user.userId;
-    const otherUserId = req.params.otherUserId;
-    
+    const { userA, userB } = req.params;
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const before = req.query.before ? new Date(req.query.before) : null;
 
     const query = {
       isPrivate: true,
       $or: [
-        { $and: [{ senderId: currentUserId }, { recipientId: otherUserId }] },
-        { $and: [{ senderId: otherUserId }, { recipientId: currentUserId }] }
+         { $and: [{ senderId: userA }, { recipientId: userB }] },
+        { $and: [{ senderId: userB }, { recipientId: userA }] }
       ]
     };
     if (before) query.createdAt = { $lt: before };
@@ -193,7 +187,7 @@ router.get('/private/:otherUserId', authenticate, async (req, res) => {
 
     res.json({ success: true, messages });
   } catch (err) {
-    console.error(`[ERROR] Failed to load private messages between ${req.user.userId} and ${req.params.otherUserId}:`, err);
+    console.error(`[ERROR] Failed to load private messages between ${req.params.userA} and ${req.params.userB}:`, err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
