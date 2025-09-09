@@ -76,25 +76,21 @@ router.post('/:roomId/messages', authenticate, async (req, res) => {
     const { roomId: roomIdString } = req.params;
     const { messageId, senderId, senderName, text, createdAt, recipientId, isPrivate } = req.body;
     
-     // Validate the roomId to ensure it's a valid ObjectId format.
+    // Validate the roomId to ensure it's a valid ObjectId format.
     if (!mongoose.Types.ObjectId.isValid(roomIdString)) {
         return res.status(400).json({ success: false, error: 'Invalid Room ID format.' });
     }
     
-    //const roomId = mongoose.Types.ObjectId(roomIdString); // Convert string to ObjectId
-    //let senderId = null;
     if (!messageId || !senderId || !senderName || !text) {
       return res.status(400).json({ success: false, error: 'messageId, senderId, senderName and text are required' });
     }
 
-    //if (req.user && req.user.userId) senderId = req.user.userId;
-    //const senderId  req.user.userId;
     const doc = await Message.findOneAndUpdate(
       { messageId },
       {
         $setOnInsert: {
           messageId,
-          room: mongoose.Types.ObjectId(roomIdString),
+          room: isPrivate ? null : mongoose.Types.ObjectId(roomIdString),
           senderId,
           senderName,
           text,
@@ -108,7 +104,6 @@ router.post('/:roomId/messages', authenticate, async (req, res) => {
 
     res.status(201).json({ success: true, message: doc });
   } catch (err) {
-    //res.status(500).json({ success: false, error: err.message });
     console.error(`[ERROR] Failed to save message:`, err);
     res.status(500).json({ success: false, error: err.message });
   }
@@ -172,6 +167,12 @@ router.get('/user', authenticate, async (req, res) => {
 router.get('/private/:userA/:userB', async (req, res) => {
   try {
     const { userA, userB } = req.params;
+    const requesterId = req.user.userId; // from the authenticate middleware
+
+    // Verify that the person making the request is part of the conversation
+    if (requesterId !== userA && requesterId !== userB) {
+      return res.status(403).json({ success: false, error: 'Forbidden: You are not authorized to view these messages.' });
+    }
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const before = req.query.before ? new Date(req.query.before) : null;
 

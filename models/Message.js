@@ -3,18 +3,14 @@
 const mongoose = require('mongoose');
 
 const MessageSchema = new mongoose.Schema({
-  messageId: { type: String, required: true, unique: true }, // idempotent
-  room: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', index: true }, // optional for private
-  senderId: { type: String, index: true }, 
+  messageId: { type: String, required: true, unique: true },
+  room: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', index: true }, 
+  senderId: { type: String, index: true },
   senderName: { type: String, required: true },
   text: { type: String, required: true, maxlength: 5000 },
   createdAt: { type: Date, default: Date.now, index: true },
-
-  // --- MODIFICATION START ---
-  // Change the recipientId to be a proper reference, just like senderId.
   isPrivate: { type: Boolean, default: false, index: true },
   recipientId: { type: String, default: null, index: true },
-    // --- MODIFICATION END ---
 }, { versionKey: false });
 
 MessageSchema.index({ room: 1, createdAt: -1 });
