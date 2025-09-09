@@ -76,8 +76,8 @@ router.post('/:roomId/messages', authenticate, async (req, res) => {
     const { roomId: roomIdString } = req.params;
     const { messageId, senderId, senderName, text, createdAt, recipientId, isPrivate } = req.body;
     
-    // Validate the roomId to ensure it's a valid ObjectId format.
-    if (!mongoose.Types.ObjectId.isValid(roomIdString)) {
+    // Validate the roomId to ensure it's a valid ObjectId format for public messages.
+    if (!isPrivate && !mongoose.Types.ObjectId.isValid(roomIdString)) {
         return res.status(400).json({ success: false, error: 'Invalid Room ID format.' });
     }
     
@@ -142,7 +142,6 @@ router.post('/:roomId/join', async (req, res) => {
   }
 });
 
-// ... (The rest of the file, /user, /find, /leave, etc., remains unchanged)
 // Get all rooms a user has created OR is allowed in
 router.get('/user', authenticate, async (req, res) => {
   try {
@@ -163,11 +162,13 @@ router.get('/user', authenticate, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // Fetch private conversation between two users
-router.get('/private/:userA/:userB', async (req, res) => {
+// --- FIX: ADDED 'authenticate' MIDDLEWARE ---
+router.get('/private/:userA/:userB', authenticate, async (req, res) => {
   try {
     const { userA, userB } = req.params;
-    const requesterId = req.user.userId; // from the authenticate middleware
+    const requesterId = req.user.userId; // This will now work correctly
 
     // Verify that the person making the request is part of the conversation
     if (requesterId !== userA && requesterId !== userB) {
@@ -240,6 +241,5 @@ router.post('/:roomId/leave', authenticate, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 module.exports = router;
