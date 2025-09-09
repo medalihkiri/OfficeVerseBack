@@ -224,6 +224,31 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/:roomId/users', authenticate, async (req, res) => {
+    try {
+        const { roomId } = req.params;
+
+        // Ensure the room ID is a valid format
+        if (!mongoose.Types.ObjectId.isValid(roomId)) {
+            return res.status(400).json({ success: false, error: 'Invalid Room ID format.' });
+        }
+
+        // Find all users who have this room in their 'allowedRooms' list.
+        // We select only the necessary fields to avoid sending sensitive data.
+        const users = await User.find({ allowedRooms: roomId }).select('_id username');
+
+        if (!users) {
+            return res.status(404).json({ success: false, error: 'Could not find users for this room.' });
+        }
+
+        res.json({ success: true, users });
+
+    } catch (err) {
+        console.error(`[ERROR] Failed to get users for room ${req.params.roomId}:`, err);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 // Leave a room
 router.post('/:roomId/leave', authenticate, async (req, res) => {
   try {
